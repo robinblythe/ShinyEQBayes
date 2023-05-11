@@ -63,7 +63,10 @@ ui <- dashboardPage(
                             min = 1,
                             max = 50,
                             value = 25)))
-              )
+              ),
+      
+      #Analyse
+      tabItem(tabName = "analyse")
       )
     )
 )
