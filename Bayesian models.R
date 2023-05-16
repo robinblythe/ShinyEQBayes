@@ -18,17 +18,20 @@ N = nrow(df)
 Y = as.matrix(dplyr::select(df, "EQ5D", "EQVAS"))
 R = matrix(data = c(1,0,0,1), nrow = 2)
 
-bvnorm <- list(N = N, Y = Y, R = R)
+
+###Intercept only model
+bvnorm1 <- list(N = N, Y = Y, R = R)
 
 #Sampler
-eq5dcode <- nimbleCode({
+eq5dnox <- nimbleCode({
   #Model
   for (i in 1:N) {
     Y[i,1:2] ~ dmnorm(mean = mu[i,1:2], prec = Omega[1:2,1:2])
     mu[i,1] <- beta[1]
-    mu[i,2] <- beta[1]
+    mu[i,2] <- beta[1] + beta[2]
   }
   beta[1] ~ dbeta(1,1)
+  beta[2] ~ dbeta(1,1)
   Omega[1:2,1:2] ~ dwish(R[1:2,1:2], 2)
   sigma[1:2, 1:2] <- inverse(Omega[1:2, 1:2])
 })
@@ -36,9 +39,39 @@ eq5dcode <- nimbleCode({
 inits <- list(beta = c(mean(df$EQ5D), mean(df$EQVAS)), Omega = R)
 inits = rep(list(inits), n.chains) # repeat initial values per chain
 
-nimbleMCMC_samples <- nimbleMCMC(code = eq5dcode,
-                                 data = bvnorm,
-                                 inits = inits, 
-                                 nchains = n.chains, 
-                                 niter = MCMC*n.chains*thin,
-                                 setSeed = 88888)
+nimble1 <- nimbleMCMC(code = eq5dnox, 
+                      data = bvnorm1,
+                      inits = inits, 
+                      nchains = n.chains, 
+                      niter = MCMC*n.chains*thin,
+                      setSeed = 88888)
+
+
+
+###With X variable 'sex'
+bvnorm2 <- list(N = N, Y = Y, R = R, sex = df$sex)
+
+#Sampler
+eq5dyesx <- nimbleCode({
+  #Model
+  for (i in 1:N) {
+    Y[i,1:2] ~ dmnorm(mean = mu[i,1:2], prec = Omega[1:2,1:2])
+    mu[i,1] <- beta[1] + beta[3]*sex[i]
+    mu[i,2] <- beta[1] + beta[2] + beta[3]*sex[i]
+  }
+  beta[1] ~ dbeta(1,1)
+  beta[2] ~ dbeta(1,1)
+  beta[3] ~ dnorm(0,10^5)
+  Omega[1:2,1:2] ~ dwish(R[1:2,1:2], 2)
+  sigma[1:2, 1:2] <- inverse(Omega[1:2, 1:2])
+})
+
+inits2 <- list(beta = c(mean(df$EQ5D), mean(df$EQVAS), 0), Omega = R)
+inits2 = rep(list(inits2), n.chains) # repeat initial values per chain
+
+nimble2 <- nimbleMCMC(code = eq5dyesx, 
+                      data = bvnorm2,
+                      inits = inits2, 
+                      nchains = n.chains, 
+                      niter = MCMC*n.chains*thin,
+                      setSeed = 88888)
