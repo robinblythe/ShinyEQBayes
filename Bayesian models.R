@@ -72,6 +72,8 @@ inits2 = rep(list(inits2), n.chains) # repeat initial values per chain
 nimble2 <- nimbleMCMC(code = eq5dyesx, 
                       data = bvnorm2,
                       inits = inits2, 
-                      nchains = n.chains, 
+                      nchains = n.chains,
                       niter = MCMC*n.chains*thin,
-                      setSeed = 88888)
+                      setSeed = 88888,
+                      summary = TRUE)
+
