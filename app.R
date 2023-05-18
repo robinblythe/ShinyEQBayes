@@ -1,5 +1,6 @@
 library(shiny)
 library(shinydashboard)
+library(nimble)
 options(shiny.error = browser)
 
 # Define UI for application that samples from joint posterior of EQ5D and EQVAS with or without sex
@@ -21,14 +22,23 @@ ui <- dashboardPage(
       #About
       tabItem(tabName = "about",
       box(title = "EQBayes",
-          p("Welcome to EQBayes, an RShiny app for sampling from the joint posterior of the EQ5D utility score and the EQVAS.",
+          p("Welcome to EQBayes, an RShiny app for sampling from the joint posterior of the EQ5D utility score and the EQVAS.", br(),
             "This app is based on the paper by ",
-            a("Blythe et al (2022).", href = "https://doi.org/10.1016/j.jval.2022.01.017"),
-            "To get started, upload a CSV file containing at least two columns:",
+            a("Blythe et al (2022).", href = "https://doi.org/10.1016/j.jval.2022.01.017"), br(),
+            "This app requires you to upload a CSV file containing at least two columns:", br(),
             "EQ5D utility scores, either from the 3L or 5L versions, and EQVAS scores.",
             "EQ5D utilities should be numeric values no greater than 1, and EQVAS scores should range from 0 to 100.",
-            "Sex can also be added as a binary variable (0/1).",
-            "The app will automatically drop missing values for analysis."))),
+            "Sex can also be added as a binary variable (0/1).", br(),
+            "The app will automatically:", br(),
+            "- Drop missing values for analysis", br(),
+            "- Divide the VAS by 100 to scale it to utility", br(),
+            "To get started, click the drop down menu at the top left to open the sidebar, and load in some data!",
+            hr(),
+            "The underlying software uses the nimble package, a fast, intuitive C++ compiling program for Markov Chain Monte Carlo (MCMC).",
+            "The model assumes flat priors of Beta(1,1) and Normal(0,10000) for utility and sex variables, respectively.",
+            "If you want to specify your own priors, this app may not be useful for you.",
+            "Check out the r-nimble.org examples to get coding on your own models.",
+            "For any questions, comments, or bug reports, please email: robin.blythe@qut.edu.au"))),
       
       #Upload
       tabItem(tabName = "upload",
@@ -97,8 +107,8 @@ ui <- dashboardPage(
                              min = 0,
                              max = 5000),
                 numericInput(inputId = "seed",
-                             label = "Set random seed?",
-                             value = 88888),
+                             label = "Set random seed",
+                             value = as.integer(runif(1,1,.Machine$integer.max))),
                 actionButton("runwithoutx",
                              label = "Run model (intercept only)"),
                 actionButton("runwithx",
@@ -177,97 +187,33 @@ server <- function(input, output, session) {
          main = "Histogram of EQVAS scores")
   })
 
-  #Decide which regression to run based on action button input
-  nimble0 <- reactiveValues()
-
-  #Regression - no independent variables
-  eventReactive(input$runwithoutx, {
-    reactive({
-      req(input$vareq5d)
-      req(input$vareqvas)
-    
-      eq5dutility <- as.numeric(df()[,input$vareqvas])
-      eq5dvas <- as.numeric(df()[,input$vareqvas/100])
-      Y = na.omit(as.matrix(eq5dutility, eq5dvas))
-      R = matrix(data = c(1,0,0,1), nrow = 2)
-      N = nrow(Y)
-      bvnorm1 <- list(N = N, Y = Y, R = R)
-    
-      eq5dnox <- nimbleCode({
-        #Model 
-        for (i in 1:N) {
-          Y[i,1:2] ~ dmnorm(mean = mu[i,1:2], prec = Omega[1:2,1:2])
-          mu[i,1] <- beta[1]
-          mu[i,2] <- beta[1] + beta[2]
-        }
-        beta[1] ~ dbeta(1,1)
-        beta[2] ~ dbeta(1,1)
-        Omega[1:2,1:2] ~ dwish(R[1:2,1:2], 2)
-        sigma[1:2, 1:2] <- inverse(Omega[1:2, 1:2])
-      })
-    
-      inits1 <- list(beta = c(mean(df()[,input$vareq5d]), mean(df()[,input$vareqvas])), Omega = R)
-      inits1 = rep(list(inits), input$n.chains) # repeat initial values per chain
-    
-      nimblereg1 <- nimbleMCMC(code = eq5dnox, 
-                              data = bvnorm1,
-                              inits = inits1, 
-                              nchains = input$n.chains,
-                              nburnin = input$burnin,
-                              niter = ifelse(input$MCMC*input$n.chains*input$thin == 0,
-                                             input$MCMC*input$n.chains + input$burnin,
-                                             input$MCMC*input$n.chains*input$thin + input$burnin),
-                              setSeed = input$seed)
-    })
+  
+  #Analysis: run nimble models
+  
+  source("./run_nimble_intercept_only.R")
+  source("./run_nimble_with_sex.R")
+  
+  observeEvent(input$runwithoutx,{
+    run_nimble_intercept_only(vareq5d = input$vareq5d,
+                              vareqvas = input$vareqvas,
+                              MCMC = input$MCMC,
+                              n.chains = input$n.chains,
+                              thin = input$thin,
+                              burnin = input$burnin,
+                              seed = input$seed)
   })
   
-  #Regression - sex variable included
-  eventReactive(input$runwithx, {
-    reactive({
-    req(input$vareq5d)
-    req(input$vareqvas)
-    req(input$sex)
-    
-    eq5dutility <- as.numeric(df()[,input$vareqvas])
-    eq5dvas <- as.numeric(df()[,input$vareqvas/100])
-    sex <- as.numeric(df()[,input$sex])
-    Y = na.omit(as.matrix(eq5dutility, eq5dvas))
-    R = matrix(data = c(1,0,0,1), nrow = 2)
-    N = nrow(Y)
-    bvnorm2 <- list(N = N, Y = Y, R = R, sex = sex)
-    
-    eq5dyesx <- nimbleCode({
-      #Model 
-      for (i in 1:N) {
-        Y[i,1:2] ~ dmnorm(mean = mu[i,1:2], prec = Omega[1:2,1:2])
-        mu[i,1] <- beta[1] + beta[3]*sex[i]
-        mu[i,2] <- beta[1] + beta[2] + beta[3]*sex[i]
-      }
-      beta[1] ~ dbeta(1,1)
-      beta[2] ~ dbeta(1,1)
-      beta[3] ~ dnorm(0,10^5)
-      Omega[1:2,1:2] ~ dwish(R[1:2,1:2], 2)
-      sigma[1:2, 1:2] <- inverse(Omega[1:2, 1:2])
-    })
-    
-    inits2 <- list(beta = c(mean(df()[,input$vareq5d]), mean(df()[,input$vareqvas]), 0), Omega = R)
-    inits2 = rep(list(inits), input$n.chains) # repeat initial values per chain
-    
-    nimblereg2 <- nimbleMCMC(code = eq5dyesx, 
-                             data = bvnorm2,
-                             inits = inits2, 
-                             nchains = input$n.chains,
-                             nburnin = input$burnin,
-                             niter = ifelse(input$MCMC*input$n.chains*input$thin == 0,
-                                            input$MCMC*input$n.chains + input$burnin,
-                                            input$MCMC*input$n.chains*input$thin + input$burnin),
-                             setSeed = input$seed)
-    })
+  observeEvent(input$runwitx,{
+    run_nimble_intercept_only(vareq5d = input$vareq5d,
+                              vareqvas = input$vareqvas,
+                              sex = input$sex,
+                              MCMC = input$MCMC,
+                              n.chains = input$n.chains,
+                              thin = input$thin,
+                              burnin = input$burnin,
+                              seed = input$seed)
   })
   
-  output$traceplot <- renderPlot({
-    plot(nimblereg1[,'beta[1]'], type = "l")
-  })
 }
 
 # Run the application 
