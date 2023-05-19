@@ -3,11 +3,12 @@
 #CSV(utility,VAS,sex)
 #MCMC iterations, chains, thinning, burn in
 
-run_nimble_with_sex = function(vareq5d, vareqvas, sex, MCMC, n.chains, burnin, thin, seed){
+run_nimble_with_sex = function(data, vareq5d, vareqvas, sex, MCMC, n.chains, burnin, thin, seed){
+  
   #Define inputs
-  utility <- as.numeric(vareq5d)
-  vas <- as.numeric(vareqvas)/100
-  sex <- as.numeric(sex)
+  utility <- as.numeric(data[[vareq5d]])
+  vas <- as.numeric(data[[vareqvas]])/100
+  sex <- as.numeric(data[[sex]])
   Y <- na.omit(as.matrix(cbind(utility, vas)))
   R <- matrix(data = c(1,0,0,1), nrow = 2)
   N <- nrow(Y)

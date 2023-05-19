@@ -1,27 +1,30 @@
 library(shiny)
 library(shinydashboard)
 library(nimble)
-options(shiny.error = browser)
+library(tibble)
+
+source("./run_nimble_intercept_only.R")
+source("./run_nimble_with_sex.R")
 
 # Define UI for application that samples from joint posterior of EQ5D and EQVAS with or without sex
 ui <- dashboardPage(
-  
   dashboardHeader(title = "EQBayes"),
-  
   dashboardSidebar(
     sidebarMenu(
       menuItem("About", tabName = "about", icon = icon("home"), selected = TRUE),
       menuItem("Upload", tabName = "upload", icon = icon("upload")),
       menuItem("Explore", tabName = "explore", icon = icon("globe")),
-      menuItem("Analyse", tabName = "analyse", icon = icon("magnifying-glass-chart"))
-    )
+      menuItem("Analyse", tabName = "analyse", icon = icon("magnifying-glass-chart")))
   ),
   
   dashboardBody(
     tabItems(
-      #About
-      tabItem(tabName = "about",
-      box(title = "EQBayes",
+      
+      # About
+      tabItem(
+        tabName = "about",
+        box(
+          title = "EQBayes",
           p("Welcome to EQBayes, an RShiny app for sampling from the joint posterior of the EQ5D utility score and the EQVAS.", br(),
             "This app is based on the paper by ",
             a("Blythe et al (2022).", href = "https://doi.org/10.1016/j.jval.2022.01.017"), br(),
@@ -38,126 +41,168 @@ ui <- dashboardPage(
             "The model assumes flat priors of Beta(1,1) and Normal(0,10000) for utility and sex variables, respectively.",
             "If you want to specify your own priors, this app may not be useful for you.",
             "Check out the r-nimble.org examples to get coding on your own models.",
-            "For any questions, comments, or bug reports, please email: robin.blythe@qut.edu.au"))),
-      
-      #Upload
-      tabItem(tabName = "upload",
-      fluidRow(
-        box(fileInput("file1", "Upload a CSV file of EQ-5D and EQVAS scores",
-                      multiple = FALSE,
-                      accept = c("text/csv",
-                                 "text/comma-separated-values,text/plain",
-                                 ".csv")),
+            "For any questions, comments, or bug reports, please email: robin.blythe@qut.edu.au"
+          )
+        )
+      ),
+
+      # Upload
+      tabItem(
+        tabName = "upload",
+        fluidRow(
+          box(
+            fileInput("file1", "Upload a CSV file of EQ-5D and EQVAS scores",
+              multiple = FALSE,
+              accept = c(
+                "text/csv",
+                "text/comma-separated-values,text/plain",
+                ".csv")
+            ),
+            
             uiOutput("var_ui1"),
             uiOutput("var_ui2"),
             uiOutput("var_ui3"),
+            
             checkboxInput("header", "Header", TRUE),
             radioButtons("sep", "Separator",
-                         choices = c(Comma = ",",
-                                     Semicolon = ";",
-                                     Tab = "\t")),
-            radioButtons("disp", "Display",
-                         choices = c(Head = "Head",
-                                     All = "All"),
-                         selected = "Head"))),
-      
-      fluidRow(box(tableOutput("contents")))
-      ),
-      
-      #Explore
-      tabItem(tabName = "explore",
-              fluidRow(box(
-                plotOutput("eq5dhist"),
-                sliderInput(inputId = "eq5dbins",
-                            label = "Number of bins",
-                            min = 1,
-                            max = 50,
-                            value = 25))),
-              
-              fluidRow(box(
-                plotOutput("eqvashist"),
-                sliderInput(inputId = "eqvasbins",
-                            label = "Number of bins",
-                            min = 1,
-                            max = 50,
-                            value = 25)))
-              ),
-      
-      #Analyse
-      tabItem(tabName = "analyse",
-              fluidRow(box(
-                numericInput(inputId = "MCMC",
-                             label = "Number of posterior draws per chain",
-                             value = 5000,
-                             min = 0,
-                             max = 10000),
-                numericInput(inputId = "n.chains",
-                             label = "Number of chains",
-                             value = 2,
-                             min = 1,
-                             max = 6),
-                numericInput(inputId = "thin",
-                             label = "How much to thin out each chain",
-                             value = 0,
-                             min = 0,
-                             max = 6),
-                numericInput(inputId = "burnin",
-                             label = "Number of iterations to burn for warmup",
-                             value = 500,
-                             min = 0,
-                             max = 5000),
-                numericInput(inputId = "seed",
-                             label = "Set random seed",
-                             value = as.integer(runif(1,1,.Machine$integer.max))),
-                actionButton("runwithoutx",
-                             label = "Run model (intercept only)"),
-                actionButton("runwithx",
-                             label = "Run model (by sex)"))),
-              
-              fluidRow(box(
-                plotOutput("traceplot")
-              ))
-              
-              
+              choices = c(
+                Comma = ",",
+                Semicolon = ";",
+                Tab = "\t"
               )
+            ),
+            radioButtons("disp", "Display",
+              choices = c(
+                Head = "Head",
+                All = "All"
+              ),
+              selected = "Head"
+            )
+          )
+        ),
+        fluidRow(box(tableOutput("contents")))
+      ),
+
+      # Explore
+      tabItem(
+        tabName = "explore",
+        fluidRow(box(
+          plotOutput("eq5dhist"),
+          sliderInput(
+            inputId = "eq5dbins",
+            label = "Number of bins",
+            min = 1,
+            max = 50,
+            value = 25
+          ),
+          width = 6
+        )),
+        fluidRow(box(
+          plotOutput("eqvashist"),
+          sliderInput(
+            inputId = "eqvasbins",
+            label = "Number of bins",
+            min = 1,
+            max = 50,
+            value = 25
+          ),
+          width = 6
+        ))
+      ),
+
+      # Analyse
+      tabItem(
+        tabName = "analyse",
+        fluidRow(box(
+          numericInput(
+            inputId = "MCMC",
+            label = "Number of posterior draws per chain",
+            value = 5000,
+            min = 0,
+            max = 10000
+          ),
+          numericInput(
+            inputId = "n.chains",
+            label = "Number of chains",
+            value = 2,
+            min = 1,
+            max = 6
+          ),
+          numericInput(
+            inputId = "thin",
+            label = "How much to thin out each chain",
+            value = 0,
+            min = 0,
+            max = 6
+          ),
+          numericInput(
+            inputId = "burnin",
+            label = "Number of iterations to burn for warmup",
+            value = 500,
+            min = 0,
+            max = 5000
+          ),
+          numericInput(
+            inputId = "seed",
+            label = "Set random seed",
+            value = as.integer(runif(1, 1, .Machine$integer.max))
+          ),
+          actionButton("runwithoutx",
+            label = "Run model (intercept only)"
+          ),
+          actionButton("runwithx",
+            label = "Run model (by sex)"
+          ),
+          uiOutput("model1summary")
+        ))
       )
     )
+  )
 )
 
 
 
 
-#Define server logic
+# Define server logic
 server <- function(input, output, session) {
-  
-  #Upload
+  # Upload
   df <- reactive({
     file1 <- input$file1
-    if(is.null(file1)){
+    if (is.null(file1)) {
       return()
     }
-    
-  df = read.csv(file=file1$datapath,
-                header = input$header,
-                sep = input$sep)
-  df
+
+    df <- read.csv(
+      file = file1$datapath,
+      header = input$header,
+      sep = input$sep
+    )
+    df
   })
-  
+
   output$contents <- renderTable({
-    req(input$file1)
-    df <- read.csv(input$file1$datapath,
-                   header = input$header,
-                   sep = input$sep)
-    
-    if(input$disp == "Head") {
+    df <- filedata()
+
+    if (input$disp == "Head") {
       return(head(df))
-    }
-    else{
+    } else {
       return(df)
     }
   })
-  
-  #Select columns to analyse
+
+  filedata <- reactive({
+    infile <- input$file1
+    if (is.null(infile)) {
+      return(NULL)
+    }
+    read.csv(
+      input$file1$datapath,
+      header = input$header,
+      sep = input$sep
+    )
+  })
+
+  # Select columns to analyse
   output$var_ui1 <- renderUI({
     selectInput("vareq5d", "Select EQ5D utility column:", choices = names(df()))
   })
@@ -167,54 +212,94 @@ server <- function(input, output, session) {
   output$var_ui3 <- renderUI({
     selectInput("sex", "Select binary (0/1) sex variable:", choices = c("None", names(df())))
   })
-  
-  #Plot/explore
+
+  # Plot/explore
   output$eq5dhist <- renderPlot({
-    x <- na.omit(as.numeric(df()[,input$vareq5d]))
+    x <- na.omit(as.numeric(df()[, input$vareq5d]))
     bins <- seq(min(x), max(x), length.out = input$eq5dbins + 1)
-    hist(x, breaks = bins, col = "#75AADB", border = "white",
-         xlab = "EQ5D utility values",
-         xlim = c(-1,1),
-         main = "Histogram of EQ5D utility scores")
+    hist(x,
+      breaks = bins, col = "#75AADB", border = "white",
+      xlab = "EQ5D utility values",
+      xlim = c(-1, 1),
+      main = "Histogram of EQ5D utility scores"
+    )
   })
-  
+
   output$eqvashist <- renderPlot({
-    x <- na.omit(as.numeric(df()[,input$vareqvas]))
+    x <- na.omit(as.numeric(df()[, input$vareqvas]))
     bins <- seq(min(x), max(x), length.out = input$eqvasbins + 1)
-    hist(x, breaks = bins, col = "#75AADB", border = "white",
-         xlab = "EQVAS values",
-         xlim = c(0,100),
-         main = "Histogram of EQVAS scores")
+    hist(x,
+      breaks = bins, col = "#75AADB", border = "white",
+      xlab = "EQVAS values",
+      xlim = c(0, 100),
+      main = "Histogram of EQVAS scores"
+    )
   })
 
-  
-  #Analysis: run nimble models
-  
-  source("./run_nimble_intercept_only.R")
-  source("./run_nimble_with_sex.R")
-  
-  observeEvent(input$runwithoutx,{
-    run_nimble_intercept_only(vareq5d = input$vareq5d,
-                              vareqvas = input$vareqvas,
-                              MCMC = input$MCMC,
-                              n.chains = input$n.chains,
-                              thin = input$thin,
-                              burnin = input$burnin,
-                              seed = input$seed)
-  })
-  
-  observeEvent(input$runwitx,{
-    run_nimble_intercept_only(vareq5d = input$vareq5d,
-                              vareqvas = input$vareqvas,
-                              sex = input$sex,
-                              MCMC = input$MCMC,
-                              n.chains = input$n.chains,
-                              thin = input$thin,
-                              burnin = input$burnin,
-                              seed = input$seed)
-  })
-  
+
+  # Analysis: run nimble models
+
+  observeEvent(input$runwithoutx, {
+    isolate({
+      df <- filedata()
+      if (is.null(df)) {
+        return(NULL)
+      }
+    })
+
+    nimble1 <- run_nimble_intercept_only(
+      data = df(),
+      vareq5d = input$vareq5d,
+      vareqvas = input$vareqvas,
+      MCMC = input$MCMC,
+      n.chains = input$n.chains,
+      thin = input$thin,
+      burnin = input$burnin,
+      seed = input$seed
+    )
+    browser()
+    # TO DO - RUN POSTERIOR DRAWS OF EQ5D AND EQVAS ALONE, THEN COMPARE USING TIDYBAYES
+    # RETURN THE stat_halfeye PLOTS BUT SKIP THE TRACE PLOTS
+    model1 <- with(df(), tibble(
+      Data = c("EQ5D utility", "EQVAS/100", "EQ5D + EQVAS"),
+      Means = c(mean(df()[[input$vareq5d]], na.rm = T),
+                mean(as.numeric(df()[[input$vareqvas]])/100, na.rm = T),
+                mean(do.call(rbind, nimble1)[,'beta[1]'])),
+      Lower = c(quantile(df()[[input$vareq5d]], 0.025, na.rm = T),
+                quantile(as.numeric(df()[[input$vareqvas]])/100, 0.025, na.rm = T),
+                quantile(do.call(rbind, nimble1)[,'beta[1]'], 0.025)),
+      Upper = c(quantile(df()[[input$vareq5d]], 0.975, na.rm = T),
+                quantile(as.numeric(df()[[input$vareqvas]])/100, 0.975, na.rm = T),
+                quantile(do.call(rbind, nimble1)[,'beta[1]'], 0.975))))
+                                        
+    
+    
+    })
+
+
+  observeEvent(input$runwithx, {
+    isolate({
+      df <- filedata()
+      if (is.null(df)) {
+        return(NULL)
+      }
+    })
+    
+    nimble2 <- run_nimble_with_sex(
+      data = df(),
+      vareq5d = input$vareq5d,
+      vareqvas = input$vareqvas,
+      sex = input$sex,
+      MCMC = input$MCMC,
+      n.chains = input$n.chains,
+      thin = input$thin,
+      burnin = input$burnin,
+      seed = input$seed
+    )
+
+    })
 }
+     
 
-# Run the application 
+# Run the application
 shinyApp(ui = ui, server = server)

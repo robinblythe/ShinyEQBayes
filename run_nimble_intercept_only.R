@@ -3,11 +3,11 @@
 #CSV(utility,VAS)
 #MCMC iterations, chains, thinning, burn in
 
-run_nimble_intercept_only = function(vareq5d, vareqvas, MCMC, n.chains, burnin, thin, seed){
-  
+run_nimble_intercept_only = function(data, vareq5d, vareqvas, MCMC, n.chains, burnin, thin, seed){
+
   #Define inputs
-  utility <- as.numeric(vareq5d)
-  vas <- as.numeric(vareqvas)/100
+  utility <- as.numeric(data[[vareq5d]])
+  vas <- as.numeric(data[[vareqvas]])/100
   Y <- na.omit(as.matrix(cbind(utility, vas)))
   R <- matrix(data = c(1,0,0,1), nrow = 2)
   N <- nrow(Y)
@@ -32,17 +32,17 @@ run_nimble_intercept_only = function(vareq5d, vareqvas, MCMC, n.chains, burnin, 
   inits1 <- list(beta = c(mean(Y[,1]), mean(Y[,2])), Omega = R)
   inits1 = rep(list(inits1), n.chains) # repeat initial values per chain
   
-  nimblereg1 <- nimbleMCMC(code = eq5dnox, 
-                           data = bvnorm1,
-                           inits = inits1, 
-                           nchains = n.chains,
-                           nburnin = burnin,
-                           niter = ifelse(MCMC*n.chains*thin == 0,
-                                          MCMC*n.chains + burnin,
-                                          MCMC*n.chains*thin + burnin),
-                           setSeed = seed,
-                           constants = constants1)
-  
-  assign("nimblereg1", nimblereg1, envir = .GlobalEnv)
-  
+  # nimblereg1 <- nimbleMCMC(code = eq5dnox, 
+  #                          data = bvnorm1,
+  #                          inits = inits1, 
+  #                          nchains = n.chains,
+  #                          nburnin = burnin,
+  #                          niter = ifelse(MCMC*n.chains*thin == 0,
+  #                                         MCMC*n.chains + burnin,
+  #                                         MCMC*n.chains*thin + burnin),
+  #                          setSeed = seed,
+  #                          constants = constants1)
+  # browser()
+  nimblereg1 <- readRDS("nimble_test_intercept_only.rds")
+  nimblereg1
 }
