@@ -50,41 +50,41 @@ run_nimble_with_sex = function(data, vareq5d, vareqvas, sex, MCMC, n.chains, bur
   inits2 <- list(beta = c(mean(Y[,1]), mean(Y[,2]), 0), Omega = R)
   inits2 = rep(list(inits2), n.chains) # repeat initial values per chain
   
-  # nimblereg2 <- c(
-  #   qs = nimbleMCMC(code = eq5d,
-  #                   data = normqs,
-  #                   inits = inits1, 
-  #                   nchains = n.chains,
-  #                   nburnin = burnin,
-  #                   niter = ifelse(MCMC*n.chains*thin == 0,
-  #                                  MCMC*n.chains + burnin,
-  #                                  MCMC*n.chains*thin + burnin),
-  #                   setSeed = seed,
-  #                   constants = constants),
-  #   
-  #   vas = nimbleMCMC(code = eq5d,
-  #                    data = normvas,
-  #                    inits = inits1,
-  #                    nchains = n.chains,
-  #                    nburnin = burnin,
-  #                    niter = ifelse(MCMC*n.chains*thin == 0,
-  #                                   MCMC*n.chains + burnin,
-  #                                   MCMC*n.chains*thin + burnin),
-  #                    setSeed = seed,
-  #                    constants = constants),
-  #   
-  #   both = nimbleMCMC(code = eq5dboth,
-  #                     data = bvnorm,
-  #                     inits = inits2, 
-  #                     nchains = n.chains,
-  #                     nburnin = burnin,
-  #                     niter = ifelse(MCMC*n.chains*thin == 0,
-  #                                    MCMC*n.chains + burnin,
-  #                                    MCMC*n.chains*thin + burnin),
-  #                     setSeed = seed,
-  #                     constants = constants))
+  nimblereg2 <- c(
+    qs = nimbleMCMC(code = eq5d,
+                    data = normqs,
+                    inits = inits1,
+                    nchains = n.chains,
+                    nburnin = burnin,
+                    niter = ifelse(MCMC*n.chains*thin == 0,
+                                   MCMC*n.chains + burnin,
+                                   MCMC*n.chains*thin + burnin),
+                    setSeed = seed,
+                    constants = constants),
 
-  nimblereg2 <- readRDS("nimble_test_with_sex.rds")
+    vas = nimbleMCMC(code = eq5d,
+                     data = normvas,
+                     inits = inits1,
+                     nchains = n.chains,
+                     nburnin = burnin,
+                     niter = ifelse(MCMC*n.chains*thin == 0,
+                                    MCMC*n.chains + burnin,
+                                    MCMC*n.chains*thin + burnin),
+                     setSeed = seed,
+                     constants = constants),
+
+    both = nimbleMCMC(code = eq5dboth,
+                      data = bvnorm,
+                      inits = inits2,
+                      nchains = n.chains,
+                      nburnin = burnin,
+                      niter = ifelse(MCMC*n.chains*thin == 0,
+                                     MCMC*n.chains + burnin,
+                                     MCMC*n.chains*thin + burnin),
+                      setSeed = seed,
+                      constants = constants))
+
+  #nimblereg2 <- readRDS("nimble_test_with_sex.rds")
 
   qs <- as.data.table(cbind(do.call(rbind, nimblereg2[1:n.chains])[,c("beta[1]", "beta[2]")], "Questions only"))
   qs0 <- as.data.table(cbind("Estimate" = as.numeric(qs$`beta[1]`), "Method" = qs$V3, "Sex" = 0))

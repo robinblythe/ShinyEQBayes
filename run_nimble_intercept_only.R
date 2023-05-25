@@ -14,8 +14,8 @@ run_nimble_intercept_only = function(data, vareq5d, vareqvas, MCMC, n.chains, bu
   N <- nrow(Y)
   
   #Data
-  normqs <- list(N = N, Y = utility)
-  normvas <- list(N = N, Y = vas)
+  normqs <- list(N = N, Y = Y[,1])
+  normvas <- list(N = N, Y = Y[,2])
   bvnorm <- list(N = N, Y = Y, R = R)
   
   eq5d <- nimbleCode({
@@ -42,46 +42,46 @@ run_nimble_intercept_only = function(data, vareq5d, vareqvas, MCMC, n.chains, bu
   })
   
   constants <- list(N = N)
-  inits1 <- list(beta = mean(utility, na.rm = T), tau = 1)
+  inits1 <- list(beta = mean(Y), tau = 1) #For univariate just start at mean (both)
   inits1 <- rep(list(inits1), n.chains) # repeat initial values per chain
-  inits2 <- list(beta = c(mean(Y[,1]), mean(Y[,2])), Omega = R)
+  inits2 <- list(beta = c(mean(Y[,1]), mean(Y[,2])), Omega = R) #For bivaraiate start at each mean
   inits2 = rep(list(inits2), n.chains) # repeat initial values per chain
   
-  # nimblereg1 <- c(
-  #   qs = nimbleMCMC(code = eq5d,
-  #                   data = normqs,
-  #                   inits = inits1, 
-  #                   nchains = n.chains,
-  #                   nburnin = burnin,
-  #                   niter = ifelse(MCMC*n.chains*thin == 0,
-  #                                  MCMC*n.chains + burnin,
-  #                                  MCMC*n.chains*thin + burnin),
-  #                   setSeed = seed,
-  #                   constants = constants),
-  #   
-  #   vas = nimbleMCMC(code = eq5d,
-  #                    data = normvas,
-  #                    inits = inits1,
-  #                    nchains = n.chains,
-  #                    nburnin = burnin,
-  #                    niter = ifelse(MCMC*n.chains*thin == 0,
-  #                                   MCMC*n.chains + burnin,
-  #                                   MCMC*n.chains*thin + burnin),
-  #                    setSeed = seed,
-  #                    constants = constants),
-  #   
-  #   both = nimbleMCMC(code = eq5dboth,
-  #                     data = bvnorm,
-  #                     inits = inits2, 
-  #                     nchains = n.chains,
-  #                     nburnin = burnin,
-  #                     niter = ifelse(MCMC*n.chains*thin == 0,
-  #                                    MCMC*n.chains + burnin,
-  #                                    MCMC*n.chains*thin + burnin),
-  #                     setSeed = seed,
-  #                     constants = constants))
+  nimblereg1 <- c(
+    qs = nimbleMCMC(code = eq5d,
+                    data = normqs,
+                    inits = inits1,
+                    nchains = n.chains,
+                    nburnin = burnin,
+                    niter = ifelse(MCMC*n.chains*thin == 0,
+                                   MCMC*n.chains + burnin,
+                                   MCMC*n.chains*thin + burnin),
+                    setSeed = seed,
+                    constants = constants),
+
+    vas = nimbleMCMC(code = eq5d,
+                     data = normvas,
+                     inits = inits1,
+                     nchains = n.chains,
+                     nburnin = burnin,
+                     niter = ifelse(MCMC*n.chains*thin == 0,
+                                    MCMC*n.chains + burnin,
+                                    MCMC*n.chains*thin + burnin),
+                     setSeed = seed,
+                     constants = constants),
+
+    both = nimbleMCMC(code = eq5dboth,
+                      data = bvnorm,
+                      inits = inits2,
+                      nchains = n.chains,
+                      nburnin = burnin,
+                      niter = ifelse(MCMC*n.chains*thin == 0,
+                                     MCMC*n.chains + burnin,
+                                     MCMC*n.chains*thin + burnin),
+                      setSeed = seed,
+                      constants = constants))
   
-  nimblereg1 <- readRDS("nimble_test_intercept_only.rds")
+  #nimblereg1 <- readRDS("nimble_test_intercept_only.rds")
   
   qs <- as.data.table(cbind(do.call(rbind, nimblereg1[1:n.chains])[,"beta"], "Questions only"))
   colnames(qs)[c(1,2)] <- c("Estimate", "Method")

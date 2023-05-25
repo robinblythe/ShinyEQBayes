@@ -144,7 +144,7 @@ ui <- dashboardPage(
           numericInput(
             inputId = "burnin",
             label = "Number of iterations to burn for warmup",
-            value = 500,
+            value = 0,
             min = 0,
             max = 5000
           ),
@@ -153,6 +153,7 @@ ui <- dashboardPage(
             label = "Set random seed",
             value = as.integer(runif(1, 1, .Machine$integer.max))
           ),
+          
           hr(),
           actionButton("runwithoutx",
             label = "Run model (intercept only)"
@@ -160,10 +161,13 @@ ui <- dashboardPage(
           actionButton("runwithx",
             label = "Run model (by sex)"
           ),
+          
           hr(),
+
           box(plotOutput("posteriors1"),
               hr(),
               tableOutput("posteriors1table")),
+          
           box(plotOutput("posteriors2"),
               hr(),
               tableOutput("posteriors2table"))
@@ -251,6 +255,9 @@ server <- function(input, output, session) {
 
 
   # Analysis: run nimble models
+  
+  output$posteriors1 <- renderPlot(NULL)
+  output$posteriors2 <- renderPlot(NULL)
 
   observeEvent(input$runwithoutx, {
     isolate({
@@ -280,7 +287,7 @@ server <- function(input, output, session) {
     output$posteriors1table <- renderTable({
       nimble1 %>%
         group_by(Method) %>%
-        summarise(Median = median(Estimate),
+        summarise(Mean = mean(Estimate),
                   Lower = quantile(Estimate, 0.025),
                   Upper = quantile(Estimate, 0.975))
 
@@ -317,7 +324,7 @@ server <- function(input, output, session) {
     output$posteriors2table <- renderTable({
       nimble2 %>%
         group_by(Method, Sex) %>%
-        summarise(Median = median(Estimate),
+        summarise(Mean = mean(Estimate),
                   Lower = quantile(Estimate, 0.025),
                   Upper = quantile(Estimate, 0.975))
     })
