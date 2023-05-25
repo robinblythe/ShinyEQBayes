@@ -85,6 +85,25 @@ run_nimble_with_sex = function(data, vareq5d, vareqvas, sex, MCMC, n.chains, bur
   #                     constants = constants))
 
   nimblereg2 <- readRDS("nimble_test_with_sex.rds")
-  nimblereg2
+
+  qs <- as.data.table(cbind(do.call(rbind, nimblereg2[1:n.chains])[,c("beta[1]", "beta[2]")], "Questions only"))
+  qs0 <- as.data.table(cbind("Estimate" = as.numeric(qs$`beta[1]`), "Method" = qs$V3, "Sex" = 0))
+  qs1 <- as.data.table(cbind("Estimate" = as.numeric(qs$`beta[1]`)+as.numeric(qs$`beta[2]`), "Method" = qs$V3, "Sex" = 1))
+  qs <- rbind(qs0, qs1)
+  
+  vas <- as.data.table(cbind(do.call(rbind, nimblereg2[(n.chains+1):(2*n.chains)])[,c("beta[1]", "beta[2]")], "VAS only"))
+  vas0 <- as.data.table(cbind("Estimate" = as.numeric(vas$`beta[1]`), "Method" = vas$V3, "Sex" = 0))
+  vas1 <- as.data.table(cbind("Estimate" = as.numeric(vas$`beta[1]`)+as.numeric(vas$`beta[2]`), "Method" = vas$V3, "Sex" = 1))
+  vas <- rbind(vas0, vas1)
+  
+  qs_vas <- as.data.table(cbind(do.call(rbind, nimblereg2[(2*n.chains+1):(3*n.chains)])[,c("beta[1]", "beta[2]", "beta[3]")], "Questions + VAS"))
+  qs_vas_0 <- as.data.table(cbind("Estimate" = as.numeric(qs_vas$`beta[1]`)+as.numeric(qs_vas$`beta[2]`), "Method" = qs_vas$V4, "Sex" = 0))
+  qs_vas_1 <- as.data.table(cbind("Estimate" = as.numeric(qs_vas$`beta[1]`)+as.numeric(qs_vas$`beta[2]`)+as.numeric(qs_vas$`beta[3]`), "Method" = qs_vas$V4, "Sex" = 1))
+  qs_vas <- rbind(qs_vas_0, qs_vas_1)
+  
+  model2 <- rbind(qs, vas, qs_vas, fill = T)
+  model2 <- model2[, lapply(.SD, as.numeric), by = Method]
+
+  model2
 
 }

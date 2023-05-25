@@ -82,7 +82,17 @@ run_nimble_intercept_only = function(data, vareq5d, vareqvas, MCMC, n.chains, bu
   #                     constants = constants))
   
   nimblereg1 <- readRDS("nimble_test_intercept_only.rds")
-  nimblereg1
   
+  qs <- as.data.table(cbind(do.call(rbind, nimblereg1[1:n.chains])[,"beta"], "Questions only"))
+  colnames(qs)[c(1,2)] <- c("Estimate", "Method")
+  vas <- as.data.table(cbind(do.call(rbind, nimblereg1[(n.chains+1):(2*n.chains)])[,"beta"], "VAS only"))
+  colnames(vas)[c(1,2)] <- c("Estimate", "Method")
+  both <- as.data.table(cbind(do.call(rbind, nimblereg1[(2*n.chains+1):(3*n.chains)])[,c("beta[1]", "beta[2]")], "Questions + VAS"))
+  qs_vas <- as.data.table(cbind("Estimate" = as.numeric(both$`beta[1]`)+as.numeric(both$`beta[2]`), "Method" = both$V3))
+
+  model1 <- rbind(qs, vas, qs_vas, fill = T)
+  model1 <- model1[, lapply(.SD, as.numeric), by = Method]
+
+  model1
 
 }

@@ -1,7 +1,10 @@
 library(shiny)
 library(shinydashboard)
 library(nimble)
-library(tibble)
+library(tidybayes)
+library(data.table)
+library(dplyr)
+library(ggplot2)
 
 source("./run_nimble_intercept_only.R")
 source("./run_nimble_with_sex.R")
@@ -27,7 +30,8 @@ ui <- dashboardPage(
           title = "EQBayes",
           p("Welcome to EQBayes, an RShiny app for sampling from the joint posterior of the EQ5D utility score and the EQVAS.", br(),
             "This app is based on the paper by ",
-            a("Blythe et al (2022).", href = "https://doi.org/10.1016/j.jval.2022.01.017"), br(),
+            a("Blythe et al (2022).", href = "https://doi.org/10.1016/j.jval.2022.01.017"), 
+            hr(),
             "This app requires you to upload a CSV file containing at least two columns:", br(),
             "EQ5D utility scores, either from the 3L or 5L versions, and EQVAS scores.",
             "EQ5D utilities should be numeric values no greater than 1, and EQVAS scores should range from 0 to 100.",
@@ -35,11 +39,13 @@ ui <- dashboardPage(
             "The app will automatically:", br(),
             "- Drop missing values for analysis", br(),
             "- Divide the VAS by 100 to scale it to utility", br(),
-            "To get started, click the drop down menu at the top left to open the sidebar, and load in some data!",
+            "To get started, click the drop down menu at the top left to open the sidebar, and load in some data!",br(),
+            "NOTE: Data is not retained by the app. However, if you are concerned about confidentiality,",
+            " you can download the app from Github and run it on your local environment.",
             hr(),
             "The underlying software uses the nimble package, a fast, intuitive C++ compiling program for Markov Chain Monte Carlo (MCMC).",
             "The model assumes flat priors of Beta(1,1) and Normal(0,10000) for utility and sex variables, respectively.",
-            "If you want to specify your own priors, this app may not be useful for you.",
+            "If you know that you want to specify your own priors, you may be better off specifying your own model as per the paper linked above.",
             "Check out the r-nimble.org examples to get coding on your own models.",
             "For any questions, comments, or bug reports, please email: robin.blythe@qut.edu.au"
           )
@@ -147,13 +153,20 @@ ui <- dashboardPage(
             label = "Set random seed",
             value = as.integer(runif(1, 1, .Machine$integer.max))
           ),
+          hr(),
           actionButton("runwithoutx",
             label = "Run model (intercept only)"
           ),
           actionButton("runwithx",
             label = "Run model (by sex)"
           ),
-          uiOutput("model1summary")
+          hr(),
+          box(plotOutput("posteriors1"),
+              hr(),
+              tableOutput("posteriors1table")),
+          box(plotOutput("posteriors2"),
+              hr(),
+              tableOutput("posteriors2table"))
         ))
       )
     )
@@ -257,23 +270,20 @@ server <- function(input, output, session) {
       burnin = input$burnin,
       seed = input$seed
     )
-    browser()
-    # TO DO - RUN POSTERIOR DRAWS OF EQ5D AND EQVAS ALONE, THEN COMPARE USING TIDYBAYES
-    # RETURN THE stat_halfeye PLOTS BUT SKIP THE TRACE PLOTS
-    model1 <- with(df(), tibble(
-      Data = c("EQ5D utility", "EQVAS/100", "EQ5D + EQVAS"),
-      Means = c(mean(df()[[input$vareq5d]], na.rm = T),
-                mean(as.numeric(df()[[input$vareqvas]])/100, na.rm = T),
-                mean(do.call(rbind, nimble1)[,'beta[1]'])),
-      Lower = c(quantile(df()[[input$vareq5d]], 0.025, na.rm = T),
-                quantile(as.numeric(df()[[input$vareqvas]])/100, 0.025, na.rm = T),
-                quantile(do.call(rbind, nimble1)[,'beta[1]'], 0.025)),
-      Upper = c(quantile(df()[[input$vareq5d]], 0.975, na.rm = T),
-                quantile(as.numeric(df()[[input$vareqvas]])/100, 0.975, na.rm = T),
-                quantile(do.call(rbind, nimble1)[,'beta[1]'], 0.975))))
-                                        
     
+    output$posteriors1 <- renderPlot({
+      nimble1 %>%
+        ggplot(aes(x = Estimate, y = Method)) +
+        stat_halfeye(.width = c(0.95, 0.5))
+      })
     
+    output$posteriors1table <- renderTable({
+      nimble1 %>%
+        group_by(Method) %>%
+        summarise(Median = median(Estimate),
+                  Lower = quantile(Estimate, 0.025),
+                  Upper = quantile(Estimate, 0.975))
+
     })
 
 
@@ -297,7 +307,23 @@ server <- function(input, output, session) {
       seed = input$seed
     )
 
+    output$posteriors2 <- renderPlot({
+      nimble2 %>%
+        ggplot(aes(x = Estimate, y = Method)) +
+        facet_wrap(~Sex) +
+        stat_halfeye(.width = c(0.95, 0.5))
     })
+    
+    output$posteriors2table <- renderTable({
+      nimble2 %>%
+        group_by(Method, Sex) %>%
+        summarise(Median = median(Estimate),
+                  Lower = quantile(Estimate, 0.025),
+                  Upper = quantile(Estimate, 0.975))
+    })
+  })
+  })
+    
 }
      
 
