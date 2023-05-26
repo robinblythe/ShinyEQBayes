@@ -292,6 +292,7 @@ server <- function(input, output, session) {
                   Upper = quantile(Estimate, 0.975))
 
     })
+  })
 
   observeEvent(input$runwithx, {
     isolate({
@@ -327,7 +328,6 @@ server <- function(input, output, session) {
                   Lower = quantile(Estimate, 0.025),
                   Upper = quantile(Estimate, 0.975))
     })
-  })
   })
     
 }

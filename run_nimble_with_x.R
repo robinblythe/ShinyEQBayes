@@ -6,7 +6,6 @@
 run_nimble_with_x = function(data, vareq5d, vareqvas, xvar, MCMC, n.chains, burnin, thin, seed){
 
   #Define inputs
-  browser()
   utility <- as.numeric(data[[vareq5d]])
   vas <- as.numeric(data[[vareqvas]])/100
   xvar <- as.numeric(data[[xvar]])
