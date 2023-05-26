@@ -7,9 +7,9 @@ library(dplyr)
 library(ggplot2)
 
 source("./run_nimble_intercept_only.R")
-source("./run_nimble_with_sex.R")
+source("./run_nimble_with_x.R")
 
-# Define UI for application that samples from joint posterior of EQ5D and EQVAS with or without sex
+# Define UI for application that samples from joint posterior of EQ5D and EQVAS with or without X var
 ui <- dashboardPage(
   dashboardHeader(title = "EQBayes"),
   dashboardSidebar(
@@ -35,16 +35,16 @@ ui <- dashboardPage(
             "This app requires you to upload a CSV file containing at least two columns:", br(),
             "EQ5D utility scores, either from the 3L or 5L versions, and EQVAS scores.",
             "EQ5D utilities should be numeric values no greater than 1, and EQVAS scores should range from 0 to 100.",
-            "Sex can also be added as a binary variable (0/1).", br(),
+            "A binary variable (0/1) such as sex or treatment effect can also be used to analyse the data.", br(),
             "The app will automatically:", br(),
             "- Drop missing values for analysis", br(),
             "- Divide the VAS by 100 to scale it to utility", br(),
             "To get started, click the drop down menu at the top left to open the sidebar, and load in some data!",br(),
             "NOTE: Data is not retained by the app. However, if you are concerned about confidentiality,",
-            " you can download the app from Github and run it on your local environment.",
+            " you can download the app from Github and run it in your local environment.",
             hr(),
             "The underlying software uses the nimble package, a fast, intuitive C++ compiling program for Markov Chain Monte Carlo (MCMC).",
-            "The model assumes flat priors of Beta(1,1) and Normal(0,10000) for utility and sex variables, respectively.",
+            "The model assumes flat priors of Beta(1,1) and Normal(0,10000) for utility and binary variables, respectively.",
             "If you know that you want to specify your own priors, you may be better off specifying your own model as per the paper linked above.",
             "Check out the r-nimble.org examples to get coding on your own models.",
             "For any questions, comments, or bug reports, please email: robin.blythe@qut.edu.au"
@@ -124,7 +124,7 @@ ui <- dashboardPage(
             inputId = "MCMC",
             label = "Number of posterior draws per chain",
             value = 5000,
-            min = 0,
+            min = 1000,
             max = 10000
           ),
           numericInput(
@@ -132,19 +132,19 @@ ui <- dashboardPage(
             label = "Number of chains",
             value = 2,
             min = 1,
-            max = 6
+            max = 3
           ),
           numericInput(
             inputId = "thin",
             label = "How much to thin out each chain",
-            value = 0,
+            value = 3,
             min = 0,
             max = 6
           ),
           numericInput(
             inputId = "burnin",
             label = "Number of iterations to burn for warmup",
-            value = 0,
+            value = 1000,
             min = 0,
             max = 5000
           ),
@@ -159,7 +159,7 @@ ui <- dashboardPage(
             label = "Run model (intercept only)"
           ),
           actionButton("runwithx",
-            label = "Run model (by sex)"
+            label = "Run model (with X variable)"
           ),
           
           hr(),
@@ -227,7 +227,7 @@ server <- function(input, output, session) {
     selectInput("vareqvas", "Select EQVAS column:", choices = names(df()))
   })
   output$var_ui3 <- renderUI({
-    selectInput("sex", "Select binary (0/1) sex variable:", choices = c("None", names(df())))
+    selectInput("xvar", "Select binary (0/1) variable:", choices = c("None", names(df())))
   })
 
   # Plot/explore
@@ -266,7 +266,7 @@ server <- function(input, output, session) {
         return(NULL)
       }
     })
-
+#Add progress bar/spinner here
     nimble1 <- run_nimble_intercept_only(
       data = df(),
       vareq5d = input$vareq5d,
@@ -293,7 +293,6 @@ server <- function(input, output, session) {
 
     })
 
-
   observeEvent(input$runwithx, {
     isolate({
       df <- filedata()
@@ -302,11 +301,11 @@ server <- function(input, output, session) {
       }
     })
     
-    nimble2 <- run_nimble_with_sex(
+    nimble2 <- run_nimble_with_x(
       data = df(),
       vareq5d = input$vareq5d,
       vareqvas = input$vareqvas,
-      sex = input$sex,
+      xvar = input$xvar,
       MCMC = input$MCMC,
       n.chains = input$n.chains,
       thin = input$thin,
@@ -317,13 +316,13 @@ server <- function(input, output, session) {
     output$posteriors2 <- renderPlot({
       nimble2 %>%
         ggplot(aes(x = Estimate, y = Method)) +
-        facet_wrap(~Sex) +
+        facet_wrap(~xvar) +
         stat_halfeye(.width = c(0.95, 0.5))
     })
     
     output$posteriors2table <- renderTable({
       nimble2 %>%
-        group_by(Method, Sex) %>%
+        group_by(Method, xvar) %>%
         summarise(Mean = mean(Estimate),
                   Lower = quantile(Estimate, 0.025),
                   Upper = quantile(Estimate, 0.975))
