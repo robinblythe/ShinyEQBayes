@@ -104,6 +104,6 @@ run_nimble_with_x = function(data, vareq5d, vareqvas, xvar, MCMC, n.chains, burn
   model2 <- rbind(qs, vas, qs_vas, fill = T)
   model2 <- model2[, lapply(.SD, as.numeric), by = Method]
 
-  model2
+  list(model2, nimblereg2)
 
 }

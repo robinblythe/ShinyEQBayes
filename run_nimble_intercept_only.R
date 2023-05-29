@@ -93,6 +93,6 @@ run_nimble_intercept_only = function(data, vareq5d, vareqvas, MCMC, n.chains, bu
   model1 <- rbind(qs, vas, qs_vas, fill = T)
   model1 <- model1[, lapply(.SD, as.numeric), by = Method]
 
-  model1
+  list(model1, nimblereg1)
 
 }

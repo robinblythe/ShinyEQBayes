@@ -68,58 +68,70 @@ ui <- dashboardPage(
             uiOutput("var_ui1"),
             uiOutput("var_ui2"),
             uiOutput("var_ui3"),
+            width = 6,
+            height = 350),
             
-            checkboxInput("header", "Header", TRUE),
-            radioButtons("sep", "Separator",
-              choices = c(
-                Comma = ",",
-                Semicolon = ";",
-                Tab = "\t"
-              )
+            box(
+              title = "File upload details",
+              
+              checkboxInput("header", "Header", TRUE),
+              
+              radioButtons("sep", "Separator",
+                choices = c(
+                  Comma = ",",
+                  Semicolon = ";",
+                  Tab = "\t"
+                  )),
+              
+              radioButtons("disp", "Display",
+                choices = c(
+                  Head = "Head",
+                  All = "All"
+                  ),
+                selected = "Head"
             ),
-            radioButtons("disp", "Display",
-              choices = c(
-                Head = "Head",
-                All = "All"
-              ),
-              selected = "Head"
-            )
+            width = 6,
+            height = 350
           )
         ),
-        fluidRow(box(tableOutput("contents")))
+        fluidRow(box(tableOutput("contents"), width = 12))
       ),
 
       # Explore
       tabItem(
         tabName = "explore",
-        fluidRow(box(
-          plotOutput("eq5dhist"),
-          sliderInput(
-            inputId = "eq5dbins",
-            label = "Number of bins",
-            min = 1,
-            max = 50,
-            value = 25
-          ),
-          width = 6
-        )),
-        fluidRow(box(
-          plotOutput("eqvashist"),
-          sliderInput(
-            inputId = "eqvasbins",
-            label = "Number of bins",
-            min = 1,
-            max = 50,
-            value = 25
-          ),
-          width = 6
-        ))
+        fluidRow(
+          box(
+            plotOutput("eq5dhist"),
+            sliderInput(
+              inputId = "eq5dbins",
+              label = "Number of bins",
+              min = 1,
+              max = 50,
+              value = 25
+              ),
+            width = 6
+            ),
+          box(
+            plotOutput("eqvashist"),
+            sliderInput(
+              inputId = "eqvasbins",
+              label = "Number of bins",
+              min = 1,
+              max = 50,
+              value = 25
+              ),
+            width = 6
+            )
+          )
       ),
+      
 
       # Analyse
       tabItem(
         tabName = "analyse",
         fluidRow(box(
+          title = "Bayesian model inputs",
           numericInput(
             inputId = "MCMC",
             label = "Number of posterior draws per chain",
@@ -158,20 +170,42 @@ ui <- dashboardPage(
           actionButton("runwithoutx",
             label = "Run model (intercept only)"
           ),
+          hr(),
           actionButton("runwithx",
             label = "Run model (with X variable)"
           ),
+          width = 3),
           
-          hr(),
-
-          box(plotOutput("posteriors1"),
-              hr(),
-              tableOutput("posteriors1table")),
+          box(
+            title = "Trace plots, intercept only",
+            uiOutput("chainselect1"),
+            uiOutput("parameterselect1"),
+            width = 9),
           
-          box(plotOutput("posteriors2"),
-              hr(),
-              tableOutput("posteriors2table"))
-        ))
+          box(
+            title = "Trace plots, with X variable",
+            uiOutput("chainselect2"),
+            uiOutput("parameterselect2"),
+            width = 9)
+          ),
+        
+        
+          
+        fluidRow(
+          box(
+            title = "Results, intercept only models",
+            plotOutput("posteriors1"),
+            hr(),
+            tableOutput("posteriors1table"),
+            width = 6),
+          
+          box(
+            title = "Results, with X variable",
+            plotOutput("posteriors2"),
+            hr(),
+            tableOutput("posteriors2table"),
+            width = 6)
+        )
       )
     )
   )
@@ -258,6 +292,30 @@ server <- function(input, output, session) {
   
   output$posteriors1 <- renderPlot(NULL)
   output$posteriors2 <- renderPlot(NULL)
+  output$chainselect1 <- renderUI({
+    selectInput("select_chain_1",
+                "Run intercept only model to proceed",
+                choices = NULL,
+    )
+  })
+  output$parameterselect1 <- renderUI({
+    selectInput("select_parameter_1",
+                "Run intercept only model to proceed",
+                choices = NULL,
+    )
+  })
+  output$chainselect2 <- renderUI({
+    selectInput("select_chain_2",
+                "Run model with x variable to proceed",
+                choices = NULL,
+    )
+  })
+  output$parameterselect2 <- renderUI({
+    selectInput("select_parameter_2",
+                "Run model with x variable to proceed",
+                choices = NULL,
+    )
+  })
 
   observeEvent(input$runwithoutx, {
     isolate({
@@ -266,7 +324,7 @@ server <- function(input, output, session) {
         return(NULL)
       }
     })
-#Add progress bar/spinner here
+    
     nimble1 <- run_nimble_intercept_only(
       data = df(),
       vareq5d = input$vareq5d,
@@ -279,19 +337,24 @@ server <- function(input, output, session) {
     )
     
     output$posteriors1 <- renderPlot({
-      nimble1 %>%
+      nimble1[[1]] %>%
         ggplot(aes(x = Estimate, y = Method)) +
         stat_halfeye(.width = c(0.95, 0.5))
       })
     
     output$posteriors1table <- renderTable({
-      nimble1 %>%
+      nimble1[[1]] %>%
         group_by(Method) %>%
         summarise(Mean = mean(Estimate),
                   Lower = quantile(Estimate, 0.025),
                   Upper = quantile(Estimate, 0.975))
-
     })
+    
+    updateSelectInput(inputId = "select_chain_1",
+                      label = "Select chain to inspect",
+                      choices = names(nimble1[[2]])
+                      )
+    
   })
 
   observeEvent(input$runwithx, {
@@ -315,20 +378,44 @@ server <- function(input, output, session) {
     )
 
     output$posteriors2 <- renderPlot({
-      nimble2 %>%
+      nimble2[[1]] %>%
         ggplot(aes(x = Estimate, y = Method)) +
         facet_wrap(~xvar) +
         stat_halfeye(.width = c(0.95, 0.5))
     })
     
     output$posteriors2table <- renderTable({
-      nimble2 %>%
+      nimble2[[1]] %>%
         group_by(Method, xvar) %>%
         summarise(Mean = mean(Estimate),
                   Lower = quantile(Estimate, 0.025),
                   Upper = quantile(Estimate, 0.975))
     })
+    
+    output$chainselect2 <- renderUI({
+      selectInput("select_chain_2",
+                  "Select chain to inspect",
+                  choices = names(nimble2[[2]])
+                  )
+    })
+    })
+  
+  eventReactive(input$select_chain_1,{
+    updateSelectInput(inputId = "select_parameter_1",
+                      label = "Select parameter to inspect",
+                      choices = colnames(nimble1[[2]][[input$select_chain_1]]))
   })
+  
+  eventReactive(input$select_chain_2,{
+    updateSelectInput(inputId = "select_parameter_2",
+                      label = "Select parameter to inspect",
+                      choices = colnames(nimble2[[2]][[input$select_chain_2]]))
+  })
+  
+
+  
+  
+  
     
 }
      
