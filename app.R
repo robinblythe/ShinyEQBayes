@@ -8,6 +8,7 @@ library(ggplot2)
 
 source("./run_nimble_intercept_only.R")
 source("./run_nimble_with_x.R")
+source("./constants.R")
 
 # Define UI for application that samples from joint posterior of EQ5D and EQVAS with or without X var
 ui <- dashboardPage(
@@ -24,33 +25,7 @@ ui <- dashboardPage(
     tabItems(
       
       # About
-      tabItem(
-        tabName = "about",
-        box(
-          title = "EQBayes",
-          p("Welcome to EQBayes, an RShiny app for sampling from the joint posterior of the EQ5D utility score and the EQVAS.", br(),
-            "This app is based on the paper by ",
-            a("Blythe et al (2022).", href = "https://doi.org/10.1016/j.jval.2022.01.017"), 
-            hr(),
-            "This app requires you to upload a CSV file containing at least two columns:", br(),
-            "EQ5D utility scores, either from the 3L or 5L versions, and EQVAS scores.",
-            "EQ5D utilities should be numeric values no greater than 1, and EQVAS scores should range from 0 to 100.",
-            "A binary variable (0/1) such as sex or treatment effect can also be used to analyse the data.", br(),
-            "The app will automatically:", br(),
-            "- Drop missing values for analysis", br(),
-            "- Divide the VAS by 100 to scale it to utility", br(),
-            "To get started, click the drop down menu at the top left to open the sidebar, and load in some data!",br(),
-            "NOTE: Data is not retained by the app. However, if you are concerned about confidentiality,",
-            " you can download the app from Github and run it in your local environment.",
-            hr(),
-            "The underlying software uses the nimble package, a fast, intuitive C++ compiling program for Markov Chain Monte Carlo (MCMC).",
-            "The model assumes flat priors of Beta(1,1) and Normal(0,10000) for utility and binary variables, respectively.",
-            "If you know that you want to specify your own priors, you may be better off specifying your own model as per the paper linked above.",
-            "Check out the r-nimble.org examples to get coding on your own models.",
-            "For any questions, comments, or bug reports, please email: robin.blythe@qut.edu.au"
-          )
-        )
-      ),
+      tab_about,
 
       # Upload
       tabItem(
@@ -98,6 +73,7 @@ ui <- dashboardPage(
       ),
 
       # Explore
+      #Consider scatterplot using x = EQ5D, y = VAS, density plot in the margins (ggside)
       tabItem(
         tabName = "explore",
         fluidRow(
@@ -175,6 +151,14 @@ ui <- dashboardPage(
             label = "Run model (with X variable)"
           ),
           width = 3),
+          
+          #Put boxes of results/halfeye plots here, in two tabs
+          #Put console underneath
+          
+          #Instead of boxes with the trace plots, just put a two column panel. Put this below
+          #Tab 1 - intercept only; Tab 2 - with X Var
+          #Column 1 - all trace plots
+          #Column 2 - all density plots
           
           box(
             title = "Trace plots, intercept only",
@@ -339,9 +323,11 @@ server <- function(input, output, session) {
     output$posteriors1 <- renderPlot({
       nimble1[[1]] %>%
         ggplot(aes(x = Estimate, y = Method)) +
-        stat_halfeye(.width = c(0.95, 0.5))
+        stat_halfeye(.width = c(0.95, 0.5)) #+
+      #add a qnorm plot with these params - mean(posterior draws) and sd (posterior draws)
       })
     
+    #Add SD to the table
     output$posteriors1table <- renderTable({
       nimble1[[1]] %>%
         group_by(Method) %>%
@@ -384,6 +370,7 @@ server <- function(input, output, session) {
         stat_halfeye(.width = c(0.95, 0.5))
     })
     
+    #Add SD to the table
     output$posteriors2table <- renderTable({
       nimble2[[1]] %>%
         group_by(Method, xvar) %>%
