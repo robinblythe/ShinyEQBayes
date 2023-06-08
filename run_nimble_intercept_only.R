@@ -47,52 +47,77 @@ run_nimble_intercept_only = function(data, vareq5d, vareqvas, MCMC, n.chains, bu
   inits2 <- list(beta = c(mean(Y[,1]), mean(Y[,2])), Omega = R) #For bivaraiate start at each mean
   inits2 = rep(list(inits2), n.chains) # repeat initial values per chain
   
-  nimblereg1 <- c(
-    qs = nimbleMCMC(code = eq5d,
-                    data = normqs,
-                    inits = inits1,
-                    nchains = n.chains,
-                    nburnin = burnin,
-                    niter = ifelse(MCMC*n.chains*thin == 0,
-                                   MCMC*n.chains + burnin,
-                                   MCMC*n.chains*thin + burnin),
-                    setSeed = seed,
-                    constants = constants),
-
-    vas = nimbleMCMC(code = eq5d,
-                     data = normvas,
-                     inits = inits1,
-                     nchains = n.chains,
-                     nburnin = burnin,
-                     niter = ifelse(MCMC*n.chains*thin == 0,
-                                    MCMC*n.chains + burnin,
-                                    MCMC*n.chains*thin + burnin),
-                     setSeed = seed,
-                     constants = constants),
-
-    both = nimbleMCMC(code = eq5dboth,
-                      data = bvnorm,
-                      inits = inits2,
+  withProgress(
+    message = "Running MCMC models - please be patient!", 
+    detail = "Compiling EQ5D...",
+    value = 0.3, {
+      
+      qs = nimbleMCMC(code = eq5d,
+                      data = normqs,
+                      inits = inits1,
                       nchains = n.chains,
                       nburnin = burnin,
                       niter = ifelse(MCMC*n.chains*thin == 0,
                                      MCMC*n.chains + burnin,
                                      MCMC*n.chains*thin + burnin),
                       setSeed = seed,
-                      constants = constants))
+                      constants = constants)
+      
+      incProgress(0.2, detail = "Compiling EQVAS...")
+      
+      vas = nimbleMCMC(code = eq5d,
+                       data = normvas,
+                       inits = inits1,
+                       nchains = n.chains,
+                       nburnin = burnin,
+                       niter = ifelse(MCMC*n.chains*thin == 0,
+                                      MCMC*n.chains + burnin,
+                                      MCMC*n.chains*thin + burnin),
+                       setSeed = seed,
+                       constants = constants)
+      
+      incProgress(0.2, detail = "Compiling joint model...")
+      
+      both = nimbleMCMC(code = eq5dboth,
+                        data = bvnorm,
+                        inits = inits2,
+                        nchains = n.chains,
+                        nburnin = burnin,
+                        niter = ifelse(MCMC*n.chains*thin == 0,
+                                       MCMC*n.chains + burnin,
+                                       MCMC*n.chains*thin + burnin),
+                        setSeed = seed,
+                        constants = constants)
+      
+      incProgress(0.2, detail = "Rendering...")
+    })
   
   #nimblereg1 <- readRDS("nimble_test_intercept_only.rds")
   
-  qs <- as.data.table(cbind(do.call(rbind, nimblereg1[1:n.chains])[,"beta"], "Questions only"))
-  colnames(qs)[c(1,2)] <- c("Estimate", "Method")
-  vas <- as.data.table(cbind(do.call(rbind, nimblereg1[(n.chains+1):(2*n.chains)])[,"beta"], "VAS only"))
-  colnames(vas)[c(1,2)] <- c("Estimate", "Method")
-  both <- as.data.table(cbind(do.call(rbind, nimblereg1[(2*n.chains+1):(3*n.chains)])[,c("beta[1]", "beta[2]")], "Questions + VAS"))
-  qs_vas <- as.data.table(cbind("Estimate" = (as.numeric(both$`beta[1]`)+as.numeric(both$`beta[2]`))/2, "Method" = both$V3))
+  for (i in 1:n.chains){
+    qs[[i]] <- cbind.data.frame(qs[[i]], Chain = names(qs)[[i]])
+    vas[[i]] <- cbind.data.frame(vas[[i]], Chain = names(vas)[[i]])
+    both[[i]] <- cbind.data.frame(both[[i]], Chain = names(both)[[i]])
+  }
 
-  model1 <- rbind(qs, vas, qs_vas, fill = T)
-  model1 <- model1[, lapply(.SD, as.numeric), by = Method]
+  
+  qs <- cbind.data.frame(do.call(rbind, qs), "Method" = "Questions only")
+  qs$tau <- NULL
+  colnames(qs) <- c("Estimate", "Chain", "Method")
+  
+  vas <- cbind.data.frame(do.call(rbind, vas), "Method" = "VAS only")
+  vas$tau <- NULL
+  colnames(vas) <- c("Estimate", "Chain", "Method")
+  
+  both <- cbind.data.frame(do.call(rbind, both), "Method" = "Questions + VAS")
+  both <- both[,-c(1:4)]
+  both$Estimate <- (both$`beta[1]` + both$`beta[2]`)/2
+  both$`beta[1]` <- NULL
+  both$`beta[2]` <- NULL
+  both <- both[,c(3,1,2)]
+  
+  model1 <- rbind.data.frame(qs, vas, both)
 
-  list(model1, nimblereg1)
+  model1
 
 }
