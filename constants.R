@@ -79,8 +79,8 @@ analyseinputs <- box(
     inputId = "n.chains",
     label = "Number of chains",
     value = 2,
-    min = 1,
-    max = 3
+    min = 2,
+    max = 4
   ),
   numericInput(
     inputId = "thin",
