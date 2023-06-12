@@ -1,4 +1,6 @@
 # ui-content.R contains UI elements to avoid clutter in app.R
+library(shiny)
+library(shinydashboard)
 
 tab_about <- tabItem(
   tabName = "about",
