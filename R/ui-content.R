@@ -1,11 +1,12 @@
 # ui-content.R contains UI elements to avoid clutter in app.R
 
-tab_about <-  tabItem(
+tab_about <- tabItem(
   tabName = "about",
   title = "EQBayes",
-  p("Welcome to EQBayes, an RShiny app for sampling from the joint posterior of the EQ5D utility score and the EQVAS.", br(),
+  p(
+    "Welcome to EQBayes, an RShiny app for sampling from the joint posterior of the EQ5D utility score and the EQVAS.", br(),
     "This app is based on the paper by ",
-    a("Blythe et al (2022).", href = "https://doi.org/10.1016/j.jval.2022.01.017"), 
+    a("Blythe et al (2022).", href = "https://doi.org/10.1016/j.jval.2022.01.017"),
     hr(),
     "This app requires you to upload a CSV file containing at least two columns:", br(),
     "EQ5D utility scores, either from the 3L or 5L versions, and EQVAS scores.",
@@ -14,7 +15,7 @@ tab_about <-  tabItem(
     "The app will automatically:", br(),
     "- Drop missing values for analysis", br(),
     "- Divide the VAS by 100 to scale it to utility", br(),
-    "To get started, click the drop down menu at the top left to open the sidebar, and load in some data!",br(),
+    "To get started, click the drop down menu at the top left to open the sidebar, and load in some data!", br(),
     "NOTE: Data is not retained by the app. However, if you are concerned about confidentiality,",
     " you can download the app from Github and run it in your local environment.",
     hr(),
@@ -32,35 +33,35 @@ sidebar <- dashboardSidebar(
     menuItem("Upload", tabName = "upload", icon = icon("upload")),
     menuItem("Explore", tabName = "explore", icon = icon("globe")),
     menuItem("Analyse", tabName = "analyse", icon = icon("magnifying-glass-chart")),
-    menuItem("Diagnostics", tabName = "diagnose", icon = icon("flask")))
+    menuItem("Diagnostics", tabName = "diagnose", icon = icon("flask"))
+  )
 )
 
 filein <- fileInput("file1", "Upload a CSV file of EQ-5D and EQVAS scores",
-                    multiple = FALSE,
-                    accept = c(
-                      "text/csv",
-                      "text/comma-separated-values,text/plain",
-                      ".csv")
+  multiple = FALSE,
+  accept = c(
+    "text/csv",
+    "text/comma-separated-values,text/plain",
+    ".csv"
+  )
 )
 
 filein_details <- box(
   title = "File upload details",
-  
   checkboxInput("header", "Header", TRUE),
-  
   radioButtons("sep", "Separator",
-               choices = c(
-                 Comma = ",",
-                 Semicolon = ";",
-                 Tab = "\t"
-               )),
-  
+    choices = c(
+      Comma = ",",
+      Semicolon = ";",
+      Tab = "\t"
+    )
+  ),
   radioButtons("disp", "Display",
-               choices = c(
-                 Head = "Head",
-                 All = "All"
-               ),
-               selected = "Head"
+    choices = c(
+      Head = "Head",
+      All = "All"
+    ),
+    selected = "Head"
   ),
   width = 6,
   height = 350
@@ -101,13 +102,13 @@ analyseinputs <- box(
     label = "Set random seed",
     value = as.integer(runif(1, 1, .Machine$integer.max))
   ),
-  
   hr(),
   actionButton("runwithoutx",
-               label = "Run model (intercept only)"
+    label = "Run model (intercept only)"
   ),
   hr(),
   actionButton("runwithx",
-               label = "Run model (with X variable)"
+    label = "Run model (with X variable)"
   ),
-  width = 3)
+  width = 3
+)

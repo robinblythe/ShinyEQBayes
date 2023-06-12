@@ -10,6 +10,7 @@ library(here)
 source(file.path(here(), "R", "run_nimble_intercept_only.R"))
 source(file.path(here(), "R", "run_nimble_with_x.R"))
 source(file.path(here(), "R", "ui-content.R"))
+source(file.path(here(), "R", "graphics.R"))
 
 # Define UI for application that samples from joint posterior of EQ5D and EQVAS with or without X var
 ui <- dashboardPage(
@@ -69,14 +70,14 @@ ui <- dashboardPage(
               type = "tabs",
               tabPanel("Intercept only model", box(
                 title = "Results, intercept only models",
-                plotOutput("posteriors1") %>% withSpinner(color = "#75AADB"),
+                plotOutput("posteriors1") |> withSpinner(color = "#75AADB"),
                 hr(),
                 tableOutput("posteriors1table"),
                 width = 9
               )),
               tabPanel("Model with X variable", box(
                 title = "Results, with X variable",
-                plotOutput("posteriors2") %>% withSpinner(color = "#75AADB"),
+                plotOutput("posteriors2") |> withSpinner(color = "#75AADB"),
                 hr(),
                 tableOutput("posteriors2table"),
                 width = 9
@@ -86,40 +87,44 @@ ui <- dashboardPage(
           )
         )
       ),
-      
-      
-      #Diagnose - trace plots, densities
+
+
+      # Diagnose - trace plots, densities
       tabItem(
         tabName = "diagnose",
         tabsetPanel(
           type = "tabs",
-          tabPanel("Intercept only model",
-                   box(
-                     title = "Trace plots, beta[1] parameter",
-                     plotOutput("traceplot1_beta1") %>% withSpinner(color = "#75AADB"),
-                     width = 12
-                   ),
-                   box(
-                     title = "Trace plots, beta[2] parameter (joint model only)",
-                     plotOutput("traceplot1_beta2") %>% withSpinner(color = "#75AADB"),
-                     width = 12
-                   )),
-          tabPanel("Model with X variable",
-                   box(
-                     title = "Trace plots, beta[1] parameter",
-                     plotOutput("traceplot2_beta1") %>% withSpinner(color = "#75AADB"),
-                     width = 12
-                   ),
-                   box(
-                     title = "Trace plots, beta[2] parameter (xvar)",
-                     plotOutput("traceplot2_beta2") %>% withSpinner(color = "#75AADB"),
-                     width = 12
-                   ),
-                   box(
-                     title = "Trace plots, beta[3] parameter (joint model only)",
-                     plotOutput("traceplot2_beta3") %>% withSpinner(color = "#75AADB"),
-                     width = 12
-                   ))
+          tabPanel(
+            "Intercept only model",
+            box(
+              title = "Trace plots, beta[1] parameter",
+              plotOutput("traceplot1_beta1") |> withSpinner(color = "#75AADB"),
+              width = 12
+            ),
+            box(
+              title = "Trace plots, beta[2] parameter (joint model only)",
+              plotOutput("traceplot1_beta2") |> withSpinner(color = "#75AADB"),
+              width = 12
+            )
+          ),
+          tabPanel(
+            "Model with X variable",
+            box(
+              title = "Trace plots, beta[1] parameter",
+              plotOutput("traceplot2_beta1") |> withSpinner(color = "#75AADB"),
+              width = 12
+            ),
+            box(
+              title = "Trace plots, beta[2] parameter (xvar)",
+              plotOutput("traceplot2_beta2") |> withSpinner(color = "#75AADB"),
+              width = 12
+            ),
+            box(
+              title = "Trace plots, beta[3] parameter (joint model only)",
+              plotOutput("traceplot2_beta3") |> withSpinner(color = "#75AADB"),
+              width = 12
+            )
+          )
         )
       )
     )
@@ -206,13 +211,17 @@ server <- function(input, output, session) {
   })
 
   output$eqscatter <- renderPlot({
-    ggplot(data = df(),
-           aes(x = df()[, input$vareq5d], y = as.numeric(df()[, input$vareqvas]))) +
+    ggplot(
+      data = df(),
+      aes(x = df()[, input$vareq5d], y = as.numeric(df()[, input$vareqvas]))
+    ) +
       geom_point() +
       geom_rug(alpha = 0.5, position = "jitter") +
-      labs(x = "EQ5D scores",
-           y = "EQVAS scores (unscaled)",
-           title = "EQ5D questions vs EQVAS scores (missing rows omitted)")
+      labs(
+        x = "EQ5D scores",
+        y = "EQVAS scores (unscaled)",
+        title = "EQ5D questions vs EQVAS scores (missing rows omitted)"
+      )
   })
 
 
@@ -241,43 +250,21 @@ server <- function(input, output, session) {
     )
 
     output$posteriors1 <- renderPlot({
-      nimble1 %>%
-        ggplot(aes(x = Estimate, y = Method)) +
-        stat_halfeye(.width = c(0.95, 0.5))
+      make_posterior_plot(nimble1)
     })
 
 
     output$posteriors1table <- renderTable({
-      nimble1 %>%
-        group_by(Method) %>%
-        summarise(
-          Mean = mean(Estimate),
-          SD = sd(Estimate),
-          Lower = quantile(Estimate, 0.025),
-          Upper = quantile(Estimate, 0.975)
-        )
+      make_posteriors_table(nimble1)
     })
-    
+
     output$traceplot1_beta1 <- renderPlot({
-      nimble1 %>%
-        group_by(Chain, Method) %>%
-        mutate(Iteration = row_number()) %>%
-        ungroup() %>%
-        ggplot(aes(x = Iteration, y = `beta[1]`)) +
-        geom_line() +
-        facet_wrap(~Chain+Method, labeller = label_wrap_gen(multi_line=FALSE))
-      })
-    
-    output$traceplot1_beta2 <- renderPlot({
-      na.omit(nimble1) %>%
-        group_by(Chain, Method) %>%
-        mutate(Iteration = row_number()) %>%
-        ungroup() %>%
-        ggplot(aes(x = Iteration, y = `beta[2]`)) +
-        geom_line() +
-        facet_wrap(~Chain+Method, labeller = label_wrap_gen(multi_line=FALSE))
+      make_traceplot(nimble1, "beta[1]")
     })
-    
+
+    output$traceplot1_beta2 <- renderPlot({
+      make_traceplot(nimble1, "beta[2]")
+    })
   })
 
   observeEvent(input$runwithx, {
@@ -301,51 +288,23 @@ server <- function(input, output, session) {
     )
 
     output$posteriors2 <- renderPlot({
-      nimble2 %>%
-        ggplot(aes(x = Estimate, y = Method)) +
-        facet_wrap(~xvar) +
-        stat_halfeye(.width = c(0.95, 0.5))
+      make_posterior_plot(nimble2)
     })
 
     output$posteriors2table <- renderTable({
-      nimble2 %>%
-        group_by(Method, xvar) %>%
-        summarise(
-          Mean = mean(Estimate),
-          SD = sd(Estimate),
-          Lower = quantile(Estimate, 0.025),
-          Upper = quantile(Estimate, 0.975)
-        )
+      make_posteriors_table(nimble2)
     })
-    
+
     output$traceplot2_beta1 <- renderPlot({
-      nimble2 %>%
-        group_by(Chain, Method) %>%
-        mutate(Iteration = row_number()) %>%
-        ungroup() %>%
-        ggplot(aes(x = Iteration, y = `beta[1]`)) +
-        geom_line() +
-        facet_wrap(~Chain+Method, labeller = label_wrap_gen(multi_line=FALSE))
+      make_traceplot(nimble2, "beta[1]")
     })
-    
+
     output$traceplot2_beta2 <- renderPlot({
-      na.omit(nimble2[,c(2, 3, 6)]) %>%
-        group_by(Chain, Method) %>%
-        mutate(Iteration = row_number()) %>%
-        ungroup() %>%
-        ggplot(aes(x = Iteration, y = `beta[2]`)) +
-        geom_line() +
-        facet_wrap(~Chain+Method, labeller = label_wrap_gen(multi_line=FALSE))
+      make_traceplot(na.omit(nimble2[, c(2, 3, 6)]), "beta[2]")
     })
-    
+
     output$traceplot2_beta3 <- renderPlot({
-      na.omit(nimble2[,c(2, 3, 7)]) %>%
-        group_by(Chain, Method) %>%
-        mutate(Iteration = row_number()) %>%
-        ungroup() %>%
-        ggplot(aes(x = Iteration, y = `beta[3]`)) +
-        geom_line() +
-        facet_wrap(~Chain+Method, labeller = label_wrap_gen(multi_line=FALSE))
+      make_traceplot(na.omit(nimble2[, c(2, 3, 7)]), "beta[3]")
     })
   })
 }

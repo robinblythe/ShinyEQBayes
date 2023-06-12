@@ -4,6 +4,10 @@
 # MCMC iterations, chains, thinning, burn in
 
 run_nimble_intercept_only <- function(data, vareq5d, vareqvas, MCMC, n.chains, burnin, thin, seed) {
+  if ("model1.rds" %in% list.files()) {
+    return(readRDS("model1.rds"))
+  }
+
   # Define inputs
   utility <- as.numeric(data[[vareq5d]])
   vas <- as.numeric(data[[vareqvas]]) / 100
@@ -101,8 +105,6 @@ run_nimble_intercept_only <- function(data, vareq5d, vareqvas, MCMC, n.chains, b
     }
   )
 
-  # nimblereg1 <- readRDS("nimble_test_intercept_only.rds")
-
   for (i in 1:n.chains) {
     qs[[i]] <- cbind.data.frame(qs[[i]], Chain = names(qs)[[i]])
     vas[[i]] <- cbind.data.frame(vas[[i]], Chain = names(vas)[[i]])
@@ -112,18 +114,19 @@ run_nimble_intercept_only <- function(data, vareq5d, vareqvas, MCMC, n.chains, b
   qs <- cbind.data.frame(do.call(rbind, qs), "Method" = "Questions only")
   qs$tau <- NULL
   qs$Estimate <- qs$beta
-  
+
   vas <- cbind.data.frame(do.call(rbind, vas), "Method" = "VAS only")
   vas$tau <- NULL
   vas$Estimate <- vas$beta
-  
+
   both <- cbind.data.frame(do.call(rbind, both), "Method" = "Questions + VAS")
   both <- both[, -c(1:4)]
   both$Estimate <- (both$`beta[1]` + both$`beta[2]`) / 2
-  
+
   model1 <- dplyr::bind_rows(qs, vas, both)
   model1$`beta[1]`[is.na(model1$`beta[1]`)] <- model1$beta[!is.na(model1$beta)]
   model1$beta <- NULL
 
+  # saveRDS(model1, "model1.rds")
   model1
 }

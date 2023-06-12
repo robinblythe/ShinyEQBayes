@@ -6,6 +6,9 @@
 .RData
 .RDataTmp
 
+# Temp data files
+model[1,2].rds
+
 # User-specific files
 .Ruserdata
 

@@ -4,6 +4,10 @@
 # MCMC iterations, chains, thinning, burn in
 
 run_nimble_with_x <- function(data, vareq5d, vareqvas, xvar, MCMC, n.chains, burnin, thin, seed) {
+  if ("model2.rds" %in% list.files()) {
+    return(readRDS("model2.rds"))
+  }
+
   # Define inputs
   utility <- as.numeric(data[[vareq5d]])
   vas <- as.numeric(data[[vareqvas]]) / 100
@@ -110,8 +114,6 @@ run_nimble_with_x <- function(data, vareq5d, vareqvas, xvar, MCMC, n.chains, bur
     both[[i]] <- cbind.data.frame(both[[i]], Chain = names(both)[[i]])
   }
 
-  # nimblereg2 <- readRDS("nimble_test_with_sex.rds")
-
   qs <- cbind.data.frame(do.call(rbind, qs), "Method" = "Questions only")
   qs0 <- qs[, c(1, 4, 5)]
   qs0$xvar <- 0
@@ -129,7 +131,7 @@ run_nimble_with_x <- function(data, vareq5d, vareqvas, xvar, MCMC, n.chains, bur
   vas1$Estimate <- vas1$`beta[1]` + vas1$`beta[2]`
   vas1$xvar <- 1
   vas <- dplyr::bind_rows(vas0, vas1)
-  
+
   both <- cbind.data.frame(do.call(rbind, both), "Method" = "Questions + VAS")
   both0 <- both[, c(5, 7, 8, 9)]
   both0$xvar <- 0
@@ -140,6 +142,7 @@ run_nimble_with_x <- function(data, vareq5d, vareqvas, xvar, MCMC, n.chains, bur
   both <- dplyr::bind_rows(both0, both1)
 
   model2 <- dplyr::bind_rows(qs, vas, both)
-
+  
+  # saveRDS(model2, "model2.rds")
   model2
 }
