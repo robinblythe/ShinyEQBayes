@@ -5,10 +5,11 @@ library(nimble)
 library(tidybayes)
 library(dplyr)
 library(ggplot2)
+library(here)
 
-source("./run_nimble_intercept_only.R")
-source("./run_nimble_with_x.R")
-source("./constants.R")
+source(file.path(here(), "R", "run_nimble_intercept_only.R"))
+source(file.path(here(), "R", "run_nimble_with_x.R"))
+source(file.path(here(), "R", "ui-content.R"))
 
 # Define UI for application that samples from joint posterior of EQ5D and EQVAS with or without X var
 ui <- dashboardPage(

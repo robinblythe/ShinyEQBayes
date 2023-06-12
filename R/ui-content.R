@@ -1,4 +1,4 @@
-#Constants for use in global environment
+# ui-content.R contains UI elements to avoid clutter in app.R
 
 tab_about <-  tabItem(
   tabName = "about",
