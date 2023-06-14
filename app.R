@@ -92,37 +92,39 @@ ui <- dashboardPage(
       # Diagnose - trace plots, densities
       tabItem(
         tabName = "diagnose",
-        tabsetPanel(
-          type = "tabs",
-          tabPanel(
-            "Intercept only model",
-            box(
-              title = "Trace plots, beta[1] parameter",
-              plotOutput("traceplot1_beta1") |> withSpinner(color = "#75AADB"),
-              width = 12
+        fluidRow(
+          tabsetPanel(
+            type = "tabs",
+            tabPanel(
+              "Intercept only model",
+              box(
+                title = "Trace plots, beta[1] parameter",
+                plotOutput("traceplot1_beta1") |> withSpinner(color = "#75AADB"),
+                width = 12
+              ),
+              box(
+                title = "Trace plots, beta[2] parameter (joint model only)",
+                plotOutput("traceplot1_beta2") |> withSpinner(color = "#75AADB"),
+                width = 12
+              )
             ),
-            box(
-              title = "Trace plots, beta[2] parameter (joint model only)",
-              plotOutput("traceplot1_beta2") |> withSpinner(color = "#75AADB"),
-              width = 12
-            )
-          ),
-          tabPanel(
-            "Model with X variable",
-            box(
-              title = "Trace plots, beta[1] parameter",
-              plotOutput("traceplot2_beta1") |> withSpinner(color = "#75AADB"),
-              width = 12
-            ),
-            box(
-              title = "Trace plots, beta[2] parameter (xvar)",
-              plotOutput("traceplot2_beta2") |> withSpinner(color = "#75AADB"),
-              width = 12
-            ),
-            box(
-              title = "Trace plots, beta[3] parameter (joint model only)",
-              plotOutput("traceplot2_beta3") |> withSpinner(color = "#75AADB"),
-              width = 12
+            tabPanel(
+              "Model with X variable",
+              box(
+                title = "Trace plots, beta[1] parameter",
+                plotOutput("traceplot2_beta1") |> withSpinner(color = "#75AADB"),
+                width = 12
+              ),
+              box(
+                title = "Trace plots, beta[2] parameter (xvar)",
+                plotOutput("traceplot2_beta2") |> withSpinner(color = "#75AADB"),
+                width = 12
+              ),
+              box(
+                title = "Trace plots, beta[3] parameter (joint model only)",
+                plotOutput("traceplot2_beta3") |> withSpinner(color = "#75AADB"),
+                width = 12
+              )
             )
           )
         )
@@ -220,7 +222,9 @@ server <- function(input, output, session) {
       labs(
         x = "EQ5D scores",
         y = "EQVAS scores (unscaled)",
-        title = "EQ5D questions vs EQVAS scores (missing rows omitted)"
+        title = "EQ5D questions vs EQVAS scores (missing rows omitted)",
+        subtitle = "Scatterplot of paired EQ5D utility and EQVAS values",
+        caption = "Axis notches (rug plot) represent one-dimensional distributions for each variable"
       )
   })
 
@@ -229,6 +233,11 @@ server <- function(input, output, session) {
 
   output$posteriors1 <- renderPlot(NULL)
   output$posteriors2 <- renderPlot(NULL)
+  output$traceplot1_beta1 <- renderPlot(NULL)
+  output$traceplot1_beta2 <- renderPlot(NULL)
+  output$traceplot2_beta1 <- renderPlot(NULL)
+  output$traceplot2_beta2 <- renderPlot(NULL)
+  output$traceplot2_beta3 <- renderPlot(NULL)
 
   observeEvent(input$runwithoutx, {
     isolate({
@@ -253,11 +262,11 @@ server <- function(input, output, session) {
       make_posterior_plot(nimble1)
     })
 
-
-    output$posteriors1table <- renderTable({
-      make_posteriors_table(nimble1)
-    })
-
+    output$posteriors1table <- renderTable(
+      make_posteriors_table(nimble1),
+      digits = 3
+    )
+    
     output$traceplot1_beta1 <- renderPlot({
       make_traceplot(nimble1, "beta[1]")
     })
@@ -291,9 +300,10 @@ server <- function(input, output, session) {
       make_posterior_plot(nimble2)
     })
 
-    output$posteriors2table <- renderTable({
-      make_posteriors_table(nimble2)
-    })
+    output$posteriors2table <- renderTable(
+      make_posteriors_table(nimble2),
+      digits = 3
+    )
 
     output$traceplot2_beta1 <- renderPlot({
       make_traceplot(nimble2, "beta[1]")
