@@ -1,3 +1,5 @@
+renv::activate()
+
 library(shiny)
 library(shinydashboard)
 library(shinycssloaders)
