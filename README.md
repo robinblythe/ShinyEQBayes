@@ -31,17 +31,7 @@ package to load the app from GitHub.
 
 ``` r
 # Install required packages
-req_packages <- c("shiny",
-                  "shinydashboard",
-                  "shinycssloaders",
-                  "nimble",
-                  "tidybayes",
-                  "dplyr",
-                  "ggplot2",
-                  "here",
-                  "renv")
-
-lapply(req_packages, function(x) if(!require(x, character.only = TRUE)) install.packages(x))
+install.packages(c("shiny", "shinydashboard", "shinycssloaders", "nimble", "tidybayes", "dplyr", "ggplot2", "here", "renv"))
 
 # Run locally from Git
 shiny::runGitHub("robinblythe/ShinyEQBayes")
