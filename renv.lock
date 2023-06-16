@@ -672,7 +672,7 @@
     },
     "nimble": {
       "Package": "nimble",
-      "Version": "1.0.0",
+      "Version": "1.0.1",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -684,7 +684,7 @@
         "numDeriv",
         "pracma"
       ],
-      "Hash": "ed2ef17e5c762e319e600d65c30a7c72"
+      "Hash": "145e92ba740e0ade8c7355854400fb36"
     },
     "nlme": {
       "Package": "nlme",
