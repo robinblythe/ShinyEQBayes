@@ -34,7 +34,8 @@ tab_about <- tabItem(
     "If you require an introduction to Bayesian methods, Andrew Gelman and colleagues have a",
     a("free online textbook.", href = "http://www.stat.columbia.edu/~gelman/book/"),
     hr(),
-    "For any questions, comments, or bug reports, please email: robin.blythe@qut.edu.au"
+    "For any questions, comments, or bug reports, please email:",
+    a("robin.blythe@qut.edu.au", href = "mailto:robin.blythe@qut.edu.au")
   )
 )
 
